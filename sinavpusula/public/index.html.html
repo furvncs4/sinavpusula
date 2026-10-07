@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SınavPusula | Kurumsal Demo & PDR Karar Destek Paneli</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>body { font-family: 'Inter', sans-serif; }</style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+
+  <header class="border-b bg-white px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+    <div class="flex items-center space-x-3">
+      <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-lg">P</div>
+      <div>
+        <h1 class="text-lg font-bold text-slate-800 leading-tight">SınavPusula</h1>
+        <p class="text-xs text-slate-500">Akademik & Davranışsal Karar Destek Sistemi</p>
+      </div>
+    </div>
+    <div class="flex items-center space-x-3">
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+        ● Claude API Demo
+      </span>
+      <span id="headerModel" class="text-xs text-slate-400 border-l pl-3 hidden sm:inline">AI Engine: Claude API</span>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+    <div class="mb-4 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2 rounded-lg text-xs flex justify-between items-center">
+      <span><strong>Bilgi:</strong> Demo verisi — gerçek öğrenci verisi değildir. Kararlar PDR uzmanı onayına tabidir.</span>
+      <span class="text-amber-700 font-medium">Tekil Günlük Check-in</span>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <section class="lg:col-span-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-4">1. Öğrenci Günlük Girişi</h2>
+        <form id="checkinForm" class="space-y-4" onsubmit="event.preventDefault(); runAnalysis();">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Öğrenci Adı</label>
+            <input type="text" id="studentName" value="Kaan Arslan (12-TM)" class="w-full text-sm border-slate-200 rounded-lg p-2.5 border bg-slate-50 focus:bg-white focus:outline-indigo-600">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Algılanan Stres Seviyesi (1 - 10)</label>
+            <input type="range" id="stressLevel" min="1" max="10" value="8" class="w-full accent-indigo-600">
+            <div class="flex justify-between text-xs text-slate-400"><span>Düşük (1)</span><span id="stressVal" class="font-bold text-indigo-600">8</span><span>Yüksek (10)</span></div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Uyku (Saat)</label>
+              <input type="number" id="sleepHours" value="4.5" step="0.5" class="w-full text-sm border-slate-200 rounded-lg p-2 border bg-slate-50">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Son Deneme (Net)</label>
+              <input type="number" id="mockScore" value="78" class="w-full text-sm border-slate-200 rounded-lg p-2 border bg-slate-50">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Öğrenci Günlük Notu / Gözlemi</label>
+            <textarea id="studentNote" rows="3" class="w-full text-sm border-slate-200 rounded-lg p-2.5 border bg-slate-50 focus:bg-white focus:outline-indigo-600">Son TYT denemesinde matematik netlerim yine yükselmedi. Geceleri uyuyamıyorum, masanın başında saatlerce kalıyorum ama odaklanamıyorum.</textarea>
+          </div>
+          <button type="submit" id="submitBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white font-medium py-2.5 px-4 rounded-lg text-sm transition flex items-center justify-center space-x-2">
+            <span id="btnText">Telemetriyi Sentezle</span>
+            <svg id="btnIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+          </button>
+        </form>
+      </section>
+
+      <section class="lg:col-span-8 space-y-6">
+        
+        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-500">2. PDR Gözlem & Öncelik Sırası</h2>
+            <span id="prioritySummaryBadge" class="text-xs bg-slate-100 text-slate-600 font-medium px-2 py-1 rounded">İnceleme Bekleniyor</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead class="text-xs text-slate-400 border-b">
+                <tr>
+                  <th class="pb-2">Öğrenci</th>
+                  <th class="pb-2">Son Net</th>
+                  <th class="pb-2">Bildirilen Uyku</th>
+                  <th class="pb-2">Durum</th>
+                  <th class="pb-2 text-right">Eylem</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr id="tableRow">
+                  <td class="py-3 font-medium text-slate-900" id="tableStudentName">Kaan Arslan (12-TM)</td>
+                  <td class="py-3 text-slate-700" id="tableMockScore">78 Net</td>
+                  <td class="py-3 text-slate-600" id="tableSleep">4.5 Saat</td>
+                  <td class="py-3" id="tableBadge"><span class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-600">Gözlemde</span></td>
+                  <td class="py-3 text-right"><span class="text-indigo-600 font-medium text-xs">Aktif Kayıt</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl border border-indigo-100 shadow-sm relative overflow-hidden">
+          <div class="absolute top-0 left-0 w-1.5 h-full bg-indigo-600"></div>
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+              <h3 class="font-bold text-slate-800 text-base">Rehberlik Karar Destek Notu</h3>
+            </div>
+            <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">Non-Clinical Decision Support</span>
+          </div>
+          
+          <div id="aiOutput" class="space-y-3 text-sm text-slate-600 leading-relaxed">
+            <p class="text-slate-500 italic">"Telemetriyi Sentezle" butonuna basarak Claude API üzerinden gerçek zamanlı karar destek analizi başlatabilirsiniz.</p>
+          </div>
+        </div>
+
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const stressRange = document.getElementById('stressLevel');
+    const stressVal = document.getElementById('stressVal');
+    stressRange.addEventListener('input', (e) => {
+      stressVal.textContent = e.target.value;
+    });
+
+    async function runAnalysis() {
+      const name = document.getElementById('studentName').value;
+      const stress = document.getElementById('stressLevel').value;
+      const sleep = document.getElementById('sleepHours').value;
+      const score = document.getElementById('mockScore').value;
+      const note = document.getElementById('studentNote').value;
+
+      const submitBtn = document.getElementById('submitBtn');
+      const btnText = document.getElementById('btnText');
+      const output = document.getElementById('aiOutput');
+      const badge = document.getElementById('prioritySummaryBadge');
+
+      submitBtn.disabled = true;
+      btnText.textContent = "Claude analiz yapıyor...";
+      
+      output.innerHTML = `
+        <div class="animate-pulse space-y-2">
+          <div class="h-4 bg-slate-200 rounded w-3/4"></div>
+          <div class="h-4 bg-slate-200 rounded w-5/6"></div>
+          <div class="h-4 bg-slate-200 rounded w-1/2"></div>
+        </div>
+      `;
+
+      try {
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            studentName: name,
+            stressLevel: stress,
+            sleepHours: sleep,
+            mockScore: score,
+            studentNote: note
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || "Sunucudan geçerli bir yanıt alınamadı.");
+        }
+
+        const data = result.data;
+
+        document.getElementById('headerModel').textContent = `AI Engine: ${result.model}`;
+        document.getElementById('tableStudentName').textContent = name;
+        document.getElementById('tableMockScore').textContent = `${score} Net`;
+        document.getElementById('tableSleep').textContent = `${sleep} Saat`;
+
+        let statusText = "İnceleme Önerilir";
+        let statusClass = "bg-amber-100 text-amber-800";
+        if (data.priority === 'low') {
+          statusText = "Rutin Takip";
+          statusClass = "bg-emerald-100 text-emerald-800";
+          badge.textContent = "Rutin Durum";
+          badge.className = "text-xs bg-emerald-50 text-emerald-700 font-medium px-2 py-1 rounded";
+        } else {
+          badge.textContent = "Birden fazla sinyal gözlendi";
+          badge.className = "text-xs bg-amber-50 text-amber-700 font-medium px-2 py-1 rounded";
+        }
+
+        document.getElementById('tableBadge').innerHTML = `<span class="px-2 py-0.5 rounded text-xs font-semibold ${statusClass}">${statusText}</span>`;
+
+        const signalsHtml = (data.signals || []).map(s => 
+          `<li class="text-xs"><strong>[${s.category}]</strong> ${s.observation} (${s.severity})</li>`
+        ).join('');
+
+        const questionsHtml = (data.counselorQuestions || []).map(q => 
+          `<li class="text-xs text-indigo-950">${q}</li>`
+        ).join('');
+
+        const limitationsHtml = (data.limitations || []).map(l => 
+          `<li class="text-[11px] text-slate-400">${l}</li>`
+        ).join('');
+
+        output.innerHTML = `
+          <p><strong>Özet:</strong> ${data.summary}</p>
+          <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+            <span class="font-semibold text-xs text-slate-700 block mb-1">Gözlenen Sinyaller:</span>
+            <ul class="list-disc pl-4 space-y-0.5 text-slate-600">${signalsHtml}</ul>
+          </div>
+          <div class="bg-indigo-50/70 p-3 rounded-lg border border-indigo-100 space-y-1">
+            <p class="font-semibold text-indigo-900 text-xs">PDR Uzmanı İçin İnceleme Çerçevesi (İnsan Değerlendirmesi Önerilir):</p>
+            <p class="text-xs text-indigo-950">${data.reason}</p>
+            <div class="pt-1">
+              <span class="font-medium text-xs text-indigo-900 block">Önerilen Görüşme Soruları:</span>
+              <ul class="list-disc pl-4 space-y-0.5">${questionsHtml}</ul>
+            </div>
+          </div>
+          <div class="pt-2 border-t border-slate-100">
+            <ul class="list-disc pl-4 space-y-0.5">${limitationsHtml}</ul>
+          </div>
+        `;
+
+      } catch (err) {
+        output.innerHTML = `
+          <div class="p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-xs">
+            <strong>Hata:</strong> ${err.message}
+          </div>
+        `;
+      } finally {
+        submitBtn.disabled = false;
+        btnText.textContent = "Telemetriyi Sentezle";
+      }
+    }
+  </script>
+</body>
+</html>
